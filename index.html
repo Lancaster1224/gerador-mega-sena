@@ -99,6 +99,10 @@
                 <label for="num-trevos" class="block text-sm font-medium text-gray-700 mb-1">Quantidade de Trevos</label>
                 <input type="number" id="num-trevos" min="2" max="5" value="2" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
             </div>
+            <div id="fixed-numbers-container" class="flex-1">
+                <label for="fixed-numbers" class="block text-sm font-medium text-gray-700 mb-1">Números Fixos (separados por vírgula)</label>
+                <input type="text" id="fixed-numbers" placeholder="Ex: 10, 25, 30" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+            </div>
         </div>
 
         <button id="generate-button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-colors duration-300 transform hover:scale-105">
@@ -118,6 +122,7 @@
             const numDezenasInput = document.getElementById('num-dezenas');
             const trevosContainer = document.getElementById('trevos-container');
             const numTrevosInput = document.getElementById('num-trevos');
+            const fixedNumbersInput = document.getElementById('fixed-numbers');
             const resultsContainer = document.getElementById('results-container');
             const messageBox = document.getElementById('message-box');
             const lotteryLogo = document.getElementById('lottery-logo');
@@ -162,6 +167,7 @@
                 numDezenasInput.max = rules.max;
                 numDezenasInput.value = rules.min;
                 numDezenasInput.disabled = false;
+                fixedNumbersInput.value = '';
 
                 if (type === 'lotomania') {
                     numDezenasInput.disabled = true;
@@ -200,11 +206,13 @@
                 }, 5000);
             }
 
-            function generateLotteryNumbers(count, limit) {
-                const numbers = new Set();
+            function generateLotteryNumbers(count, limit, fixedNumbers = []) {
+                const numbers = new Set(fixedNumbers);
                 while (numbers.size < count) {
                     const number = Math.floor(Math.random() * limit) + 1;
-                    numbers.add(number);
+                    if (!numbers.has(number)) {
+                        numbers.add(number);
+                    }
                 }
                 return Array.from(numbers).sort((a, b) => a - b);
             }
@@ -336,6 +344,7 @@
                 const numDezenas = parseInt(numDezenasInput.value, 10);
                 const lotteryType = lotteryTypeSelect.value;
                 const rules = lotteryRules[lotteryType];
+                const fixedNumbers = fixedNumbersInput.value.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n));
 
                 if (isNaN(numJogos) || numJogos < 1 || numJogos > 100) {
                     showMessage('Por favor, insira um número de jogos entre 1 e 100.', 'error');
@@ -343,6 +352,10 @@
                 }
                 if (isNaN(numDezenas) || numDezenas < rules.min || numDezenas > rules.max) {
                     showMessage(`Por favor, insira um número de dezenas entre ${rules.min} e ${rules.max} para a ${rules.title}.`, 'error');
+                    return;
+                }
+                if (fixedNumbers.length > numDezenas) {
+                    showMessage(`A quantidade de números fixos não pode ser maior que o número de dezenas por jogo (${numDezenas}).`, 'error');
                     return;
                 }
 
@@ -355,7 +368,7 @@
                     const games = [];
                     const trevoGames = [];
                     for (let i = 0; i < numJogos; i++) {
-                        games.push(generateLotteryNumbers(numDezenas, rules.limit));
+                        games.push(generateLotteryNumbers(numDezenas, rules.limit, fixedNumbers));
                         trevoGames.push(generateLotteryNumbers(numTrevos, rules.trevosLimit));
                     }
                     displayResults(games, lotteryType, trevoGames);
@@ -369,7 +382,7 @@
                     const games = [];
                     const specialGames = [];
                     for (let i = 0; i < numJogos; i++) {
-                        games.push(generateLotteryNumbers(rules.min, rules.limit));
+                        games.push(generateLotteryNumbers(rules.min, rules.limit, fixedNumbers));
                         specialGames.push([Math.floor(Math.random() * times.length)]);
                     }
                     displayResults(games, lotteryType, specialGames);
@@ -377,14 +390,14 @@
                     const games = [];
                     const specialGames = [];
                     for (let i = 0; i < numJogos; i++) {
-                        games.push(generateLotteryNumbers(rules.min, rules.limit));
+                        games.push(generateLotteryNumbers(rules.min, rules.limit, fixedNumbers));
                         specialGames.push([Math.floor(Math.random() * meses.length)]);
                     }
                     displayResults(games, lotteryType, specialGames);
                 } else {
                     const games = [];
                     for (let i = 0; i < numJogos; i++) {
-                        games.push(generateLotteryNumbers(numDezenas, rules.limit));
+                        games.push(generateLotteryNumbers(numDezenas, rules.limit, fixedNumbers));
                     }
                     displayResults(games, lotteryType);
                 }
@@ -397,3 +410,5 @@
     </script>
 </body>
 </html>
+
+
