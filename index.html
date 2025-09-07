@@ -354,8 +354,8 @@
                     showMessage(`Por favor, insira um número de dezenas entre ${rules.min} e ${rules.max} para a ${rules.title}.`, 'error');
                     return;
                 }
-                if (fixedNumbers.length > numDezenas) {
-                    showMessage(`A quantidade de números fixos não pode ser maior que o número de dezenas por jogo (${numDezenas}).`, 'error');
+                if (fixedNumbers.length >= numDezenas) {
+                    showMessage(`A quantidade de números fixos deve ser menor que o número de dezenas por jogo (${numDezenas}).`, 'error');
                     return;
                 }
 
@@ -410,5 +410,6 @@
     </script>
 </body>
 </html>
+
 
 
