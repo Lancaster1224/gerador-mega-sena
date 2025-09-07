@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Loterias</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .lottery-number {
+            background-color: white;
+            color: #2c52b2;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            font-weight: bold;
+            font-size: 1.125rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .trevo-number {
+            background-color: #10b981;
+        }
+        .team-month-number {
+            background-color: #f59e0b;
+        }
+        .supersete-column {
+            background-color: #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .supersete-container {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+            overflow-x: auto;
+        }
+        .supersete-container .lottery-number {
+            width: 30px;
+            height: 30px;
+            font-size: 0.875rem;
+        }
+        @media (min-width: 768px) {
+            .supersete-container .lottery-number {
+                width: 40px;
+                height: 40px;
+                font-size: 1.125rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="max-w-xl w-full p-8 bg-white rounded-xl shadow-2xl space-y-6 text-center">
+        <div class="flex justify-center mb-6">
+            <img id="lottery-logo" src="https://placehold.co/120x60/32b95c/white?text=Mega+Sena" alt="Logo da Mega Sena" class="rounded-lg shadow-md">
+        </div>
+        <h1 class="text-4xl font-extrabold text-gray-800 mb-4">Gerador de Loterias</h1>
+        <p class="text-gray-600 mb-6">Escolha a loteria e gere seus números da sorte.</p>
+
+        <div class="flex flex-col space-y-4 mb-6">
+            <div class="flex-1">
+                <label for="lottery-type" class="block text-sm font-medium text-gray-700 mb-1">Escolha a Loteria</label>
+                <select id="lottery-type" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                    <option value="megasena">Mega Sena</option>
+                    <option value="lotofacil">Lotofácil</option>
+                    <option value="quina">Quina</option>
+                    <option value="lotomania">Lotomania</option>
+                    <option value="supersete">Super Sete</option>
+                    <option value="timemania">Timemania</option>
+                    <option value="diasorte">Dia de Sorte</option>
+                    <option value="maismilionaria">+Milionária</option>
+                </select>
+            </div>
+            <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+                <div class="flex-1">
+                    <label for="num-jogos" class="block text-sm font-medium text-gray-700 mb-1">Número de Jogos</label>
+                    <input type="number" id="num-jogos" min="1" max="100" value="1" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                </div>
+                <div class="flex-1">
+                    <label for="num-dezenas" class="block text-sm font-medium text-gray-700 mb-1">Dezenas por Jogo</label>
+                    <input type="number" id="num-dezenas" min="6" max="20" value="6" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                </div>
+            </div>
+            <div id="trevos-container" class="flex-1 hidden">
+                <label for="num-trevos" class="block text-sm font-medium text-gray-700 mb-1">Quantidade de Trevos</label>
+                <input type="number" id="num-trevos" min="2" max="5" value="2" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+            </div>
+        </div>
+
+        <button id="generate-button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-colors duration-300 transform hover:scale-105">
+            Gerar Jogos
+        </button>
+
+        <div id="results-container" class="mt-8 space-y-6"></div>
+
+        <div id="message-box" class="mt-4 p-4 rounded-lg hidden"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const generateButton = document.getElementById('generate-button');
+            const lotteryTypeSelect = document.getElementById('lottery-type');
+            const numJogosInput = document.getElementById('num-jogos');
+            const numDezenasInput = document.getElementById('num-dezenas');
+            const trevosContainer = document.getElementById('trevos-container');
+            const numTrevosInput = document.getElementById('num-trevos');
+            const resultsContainer = document.getElementById('results-container');
+            const messageBox = document.getElementById('message-box');
+            const lotteryLogo = document.getElementById('lottery-logo');
+
+            const lotteryRules = {
+                megasena: { min: 6, max: 20, limit: 60, title: 'Mega Sena', logo: 'https://placehold.co/120x60/32b95c/white?text=Mega+Sena', cardColor: 'bg-green-500' },
+                lotofacil: { min: 15, max: 20, limit: 25, title: 'Lotofácil', logo: 'https://placehold.co/120x60/9c1a8e/white?text=Lotofácil', cardColor: 'bg-purple-600' },
+                quina: { min: 5, max: 15, limit: 80, title: 'Quina', logo: 'https://placehold.co/120x60/2b3990/white?text=Quina', cardColor: 'bg-blue-600' },
+                lotomania: { min: 50, max: 50, limit: 100, title: 'Lotomania', logo: 'https://placehold.co/120x60/f28d25/white?text=Lotomania', cardColor: 'bg-orange-500' },
+                supersete: { min: 7, max: 14, limit: 9, title: 'Super Sete', logo: 'https://placehold.co/120x60/0a3b8d/white?text=Super+Sete', cardColor: 'bg-indigo-700' },
+                timemania: { min: 10, max: 10, limit: 80, teamLimit: 80, title: 'Timemania', logo: 'https://placehold.co/120x60/5cb85c/white?text=Timemania', cardColor: 'bg-teal-500' },
+                diasorte: { min: 7, max: 15, limit: 31, mesLimit: 12, title: 'Dia de Sorte', logo: 'https://placehold.co/120x60/f0ad4e/white?text=Dia+de+Sorte', cardColor: 'bg-yellow-500' },
+                maismilionaria: { min: 6, max: 12, limit: 50, trevosMin: 2, trevosMax: 5, trevosLimit: 6, title: '+Milionária', logo: 'https://placehold.co/120x60/007a4a/white?text=%2BMilion%C3%A1ria', cardColor: 'bg-green-700' }
+            };
+
+            const times = [
+                'Flamengo', 'Corinthians', 'São Paulo', 'Palmeiras', 'Vasco', 'Santos', 'Grêmio', 'Internacional',
+                'Cruzeiro', 'Atlético-MG', 'Fluminense', 'Botafogo', 'Bahia', 'Vitória', 'Sport', 'Náutico',
+                'Santa Cruz', 'Fortaleza', 'Ceará', 'Goiás', 'Atlético-GO', 'Coritiba', 'Athletico-PR', 'Paraná',
+                'Chapecoense', 'Avaí', 'Figueirense', 'Joinville', 'Criciúma', 'Paysandu', 'Remo', 'Tuna Luso',
+                'Bragantino', 'Guarani', 'Ponte Preta', 'Juventude', 'Caxias', 'Brasil de Pelotas', 'Pelotas',
+                'Londrina', 'Operário-PR', 'Sampaio Corrêa', 'ABC', 'América-RN', 'Treze', 'Campinense', 'CRB',
+                'CSA', 'Confiança', 'Sergipe', 'River-PI', 'Moto Club', 'Imperatriz', 'Anapolina', 'Vila Nova',
+                'Aparecidense', 'Ferroviário', 'Altos', 'Boa Esporte', 'Tombense', 'Caldense', 'Uberlândia',
+                'URT', 'Tupi', 'Tombense', 'América-MG', 'Cuiabá', 'Luverdense', 'Sinop', 'Mixto', 'União Rondonópolis',
+                'São Raimundo-AM', 'Nacional-AM', 'Rio Negro-AM', 'Manaus', 'CSA', 'ASA', 'CRB', 'Murici',
+                'Salgueiro', 'Petrolina', 'Afogados', 'Atlético-CE', 'Guarany de Sobral', 'Iguatu', 'Pacajus',
+                'Sousa', 'Campinense', 'Treze', 'Botafogo-PB', 'Salgueiro', 'Serra Talhada', 'Central', 'Petrolina',
+                'Juazeirense', 'Jacuipense', 'Vitória da Conquista', 'Atlético de Alagoinhas', 'Jequié',
+                'Porto Seguro', 'Jacobina'
+            ];
+
+            const meses = [
+                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+            ];
+
+            function updateDezenasRange() {
+                const type = lotteryTypeSelect.value;
+                const rules = lotteryRules[type];
+                numDezenasInput.min = rules.min;
+                numDezenasInput.max = rules.max;
+                numDezenasInput.value = rules.min;
+                numDezenasInput.disabled = false;
+
+                if (type === 'lotomania') {
+                    numDezenasInput.disabled = true;
+                }
+
+                if (type === 'maismilionaria') {
+                    trevosContainer.classList.remove('hidden');
+                } else {
+                    trevosContainer.classList.add('hidden');
+                }
+            }
+
+            function updateLogo() {
+                const type = lotteryTypeSelect.value;
+                lotteryLogo.src = lotteryRules[type].logo;
+                lotteryLogo.alt = `Logo da ${lotteryRules[type].title}`;
+            }
+
+            lotteryTypeSelect.addEventListener('change', () => {
+                updateDezenasRange();
+                updateLogo();
+            });
+            updateDezenasRange();
+            updateLogo();
+
+            function showMessage(message, type = 'info') {
+                messageBox.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+                if (type === 'error') {
+                    messageBox.classList.add('bg-red-100', 'text-red-700');
+                } else if (type === 'success') {
+                    messageBox.classList.add('bg-green-100', 'text-green-700');
+                }
+                messageBox.textContent = message;
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                }, 5000);
+            }
+
+            function generateLotteryNumbers(count, limit) {
+                const numbers = new Set();
+                while (numbers.size < count) {
+                    const number = Math.floor(Math.random() * limit) + 1;
+                    numbers.add(number);
+                }
+                return Array.from(numbers).sort((a, b) => a - b);
+            }
+
+            function generateSuperSeteNumbers(count) {
+                const numbers = [];
+                const columnNumbers = new Array(7).fill().map(() => new Set());
+                let remaining = count;
+                
+                // Distribui os números
+                while (remaining > 0) {
+                    const colIndex = Math.floor(Math.random() * 7);
+                    if (columnNumbers[colIndex].size < 2) {
+                        const newNumber = Math.floor(Math.random() * 10);
+                        if (!columnNumbers[colIndex].has(newNumber)) {
+                            columnNumbers[colIndex].add(newNumber);
+                            remaining--;
+                        }
+                    }
+                }
+                
+                // Garante pelo menos um número por coluna
+                for (let i = 0; i < 7; i++) {
+                    if (columnNumbers[i].size === 0) {
+                        const newNumber = Math.floor(Math.random() * 10);
+                        columnNumbers[i].add(newNumber);
+                    }
+                }
+
+                columnNumbers.forEach(col => numbers.push(Array.from(col).sort((a, b) => a - b)));
+                return numbers;
+            }
+
+
+            function displayResults(games, lotteryType, specialNumbers) {
+                resultsContainer.innerHTML = '';
+                if (games.length === 0) {
+                    return;
+                }
+
+                games.forEach((game, index) => {
+                    const gameDiv = document.createElement('div');
+                    const rules = lotteryRules[lotteryType];
+                    gameDiv.classList.add('p-4', 'rounded-xl', 'shadow-md', 'text-center', rules.cardColor, 'text-white');
+                    
+                    const title = document.createElement('h3');
+                    title.classList.add('text-lg', 'font-semibold', 'mb-2');
+                    title.textContent = `${rules.title} - Jogo #${index + 1}`;
+                    gameDiv.appendChild(title);
+
+                    if (lotteryType === 'supersete') {
+                        const superSeteContainer = document.createElement('div');
+                        superSeteContainer.classList.add('supersete-container');
+                        game.forEach((column, colIndex) => {
+                            const columnDiv = document.createElement('div');
+                            columnDiv.classList.add('supersete-column');
+                            const colTitle = document.createElement('h4');
+                            colTitle.classList.add('text-sm', 'font-semibold', 'text-gray-600', 'mb-1');
+                            colTitle.textContent = `Coluna ${colIndex + 1}`;
+                            columnDiv.appendChild(colTitle);
+                            
+                            column.forEach(number => {
+                                const numberSpan = document.createElement('span');
+                                numberSpan.classList.add('lottery-number');
+                                numberSpan.textContent = number;
+                                columnDiv.appendChild(numberSpan);
+                            });
+                            superSeteContainer.appendChild(columnDiv);
+                        });
+                        gameDiv.appendChild(superSeteContainer);
+                    } else {
+                        const numbersDiv = document.createElement('div');
+                        numbersDiv.classList.add('flex', 'flex-wrap', 'justify-center', 'gap-2');
+                        
+                        let mainNumbers = game;
+                        let specialDisplayNumbers = [];
+                        let specialTitle = '';
+    
+                        if (lotteryType === 'maismilionaria') {
+                            specialDisplayNumbers = specialNumbers[index];
+                            specialTitle = 'Trevos:';
+                        } else if (lotteryType === 'timemania') {
+                            specialDisplayNumbers = specialNumbers[index];
+                            specialTitle = 'Time do Coração:';
+                        } else if (lotteryType === 'diasorte') {
+                            specialDisplayNumbers = specialNumbers[index];
+                            specialTitle = 'Mês da Sorte:';
+                        }
+    
+                        mainNumbers.forEach(number => {
+                            const numberSpan = document.createElement('span');
+                            numberSpan.classList.add('lottery-number');
+                            numberSpan.textContent = String(number).padStart(2, '0');
+                            numbersDiv.appendChild(numberSpan);
+                        });
+    
+                        if (specialDisplayNumbers && specialDisplayNumbers.length > 0) {
+                            const specialTitleEl = document.createElement('h4');
+                            specialTitleEl.classList.add('text-sm', 'font-semibold', 'text-gray-200', 'mt-4', 'mb-2', 'w-full');
+                            specialTitleEl.textContent = specialTitle;
+                            numbersDiv.appendChild(specialTitleEl);
+    
+                            specialDisplayNumbers.forEach(number => {
+                                const specialSpan = document.createElement('span');
+                                let textContent = String(number).padStart(2, '0');
+                                if (lotteryType === 'timemania') {
+                                    textContent = times[number];
+                                } else if (lotteryType === 'diasorte') {
+                                    textContent = meses[number];
+                                }
+                                specialSpan.classList.add('lottery-number');
+                                if (lotteryType === 'maismilionaria') {
+                                    specialSpan.classList.add('trevo-number');
+                                } else {
+                                    specialSpan.classList.add('team-month-number');
+                                }
+                                specialSpan.textContent = textContent;
+                                numbersDiv.appendChild(specialSpan);
+                            });
+                        }
+                        gameDiv.appendChild(numbersDiv);
+                    }
+                    resultsContainer.appendChild(gameDiv);
+                });
+            }
+
+            generateButton.addEventListener('click', () => {
+                const numJogos = parseInt(numJogosInput.value, 10);
+                const numDezenas = parseInt(numDezenasInput.value, 10);
+                const lotteryType = lotteryTypeSelect.value;
+                const rules = lotteryRules[lotteryType];
+
+                if (isNaN(numJogos) || numJogos < 1 || numJogos > 100) {
+                    showMessage('Por favor, insira um número de jogos entre 1 e 100.', 'error');
+                    return;
+                }
+                if (isNaN(numDezenas) || numDezenas < rules.min || numDezenas > rules.max) {
+                    showMessage(`Por favor, insira um número de dezenas entre ${rules.min} e ${rules.max} para a ${rules.title}.`, 'error');
+                    return;
+                }
+
+                if (lotteryType === 'maismilionaria') {
+                    const numTrevos = parseInt(numTrevosInput.value, 10);
+                    if (isNaN(numTrevos) || numTrevos < rules.trevosMin || numTrevos > rules.trevosMax) {
+                        showMessage(`Por favor, insira um número de trevos entre ${rules.trevosMin} e ${rules.trevosMax}.`, 'error');
+                        return;
+                    }
+                    const games = [];
+                    const trevoGames = [];
+                    for (let i = 0; i < numJogos; i++) {
+                        games.push(generateLotteryNumbers(numDezenas, rules.limit));
+                        trevoGames.push(generateLotteryNumbers(numTrevos, rules.trevosLimit));
+                    }
+                    displayResults(games, lotteryType, trevoGames);
+                } else if (lotteryType === 'supersete') {
+                    const games = [];
+                    for (let i = 0; i < numJogos; i++) {
+                        games.push(generateSuperSeteNumbers(numDezenas));
+                    }
+                    displayResults(games, lotteryType);
+                } else if (lotteryType === 'timemania') {
+                    const games = [];
+                    const specialGames = [];
+                    for (let i = 0; i < numJogos; i++) {
+                        games.push(generateLotteryNumbers(rules.min, rules.limit));
+                        specialGames.push([Math.floor(Math.random() * times.length)]);
+                    }
+                    displayResults(games, lotteryType, specialGames);
+                } else if (lotteryType === 'diasorte') {
+                    const games = [];
+                    const specialGames = [];
+                    for (let i = 0; i < numJogos; i++) {
+                        games.push(generateLotteryNumbers(rules.min, rules.limit));
+                        specialGames.push([Math.floor(Math.random() * meses.length)]);
+                    }
+                    displayResults(games, lotteryType, specialGames);
+                } else {
+                    const games = [];
+                    for (let i = 0; i < numJogos; i++) {
+                        games.push(generateLotteryNumbers(numDezenas, rules.limit));
+                    }
+                    displayResults(games, lotteryType);
+                }
+
+                if (numJogos > 0) {
+                    showMessage('Jogos gerados com sucesso!', 'success');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
