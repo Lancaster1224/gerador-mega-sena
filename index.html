@@ -67,7 +67,16 @@
             }
         }
     </style>
-</head>
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-QDYK6ZVFF8"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'G-QDYK6ZVFF8');
+    </script>
+    </head>
 <body>
     <div class="max-w-xl w-full p-8 bg-white rounded-xl shadow-2xl space-y-6 text-center">
         <div class="flex justify-center mb-6">
@@ -159,7 +168,9 @@
 
             // --- Regras das Loterias (com colunas do histórico) ---
             const lotteryRules = {
+                // *** CORREÇÃO: Mega Sena agora usa ';', como os seus outros arquivos ***
                 megasena: { min: 6, max: 20, limit: 60, title: 'Mega Sena', logo: 'https://placehold.co/120x60/32b95c/white?text=Mega+Sena', cardColor: 'bg-green-500', histCols: ['Bola1', 'Bola2', 'Bola3', 'Bola4', 'Bola5', 'Bola6'], prizes: [4, 5, 6], delimiter: ';' },
+                
                 lotofacil: { min: 15, max: 20, limit: 25, title: 'Lotofácil', logo: 'https://placehold.co/120x60/9c1a8e/white?text=Lotofácil', cardColor: 'bg-purple-600', histCols: Array.from({length: 15}, (_, i) => `Bola${i + 1}`), prizes: [11, 12, 13, 14, 15], delimiter: ';' },
                 quina: { min: 5, max: 15, limit: 80, title: 'Quina', logo: 'https://placehold.co/120x60/2b3990/white?text=Quina', cardColor: 'bg-blue-600', histCols: ['Bola1', 'Bola2', 'Bola3', 'Bola4', 'Bola5'], prizes: [2, 3, 4, 5], delimiter: ';' },
                 lotomania: { min: 50, max: 50, limit: 100, title: 'Lotomania', logo: 'https://placehold.co/120x60/f28d25/white?text=Lotomania', cardColor: 'bg-orange-500', histCols: Array.from({length: 20}, (_, i) => `Bola${i + 1}`), prizes: [15, 16, 17, 18, 19, 20, 0], delimiter: ';' },
@@ -402,10 +413,8 @@
                     output.push(`${prize} acertos: <strong>${count}</strong>`);
                 });
                 
-                // ### INÍCIO DA ALTERAÇÃO (SOLICITADA PELO USUÁRIO) ###
                 // Adiciona o título "Histórico:" antes da contagem de prêmios.
                 return `Histórico:<br>${output.join(' | ')}`;
-                // ### FIM DA ALTERAÇÃO ###
             }
 
             // ---------- DISPLAY RESULTS ----------
@@ -547,7 +556,6 @@
                 displayResults(games, lotteryType, specialGames);
 
                 if (games.length > 0) {
-                    // Mensagem de sucesso (corrigida)
                     showMessage('Jogos gerados com sucesso!', 'success'); 
                 }
             });
