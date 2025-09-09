@@ -14,6 +14,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            padding: 1rem;
         }
         .lottery-number {
             background-color: white;
@@ -27,21 +28,25 @@
             font-weight: bold;
             font-size: 1.125rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            white-space: nowrap;
         }
         .trevo-number {
             background-color: #10b981;
+            color: white;
         }
         .team-month-number {
             background-color: #f59e0b;
+            color: white;
         }
         .supersete-column {
             background-color: #e2e8f0;
             border-radius: 0.5rem;
-            padding: 1rem;
+            padding: 0.5rem;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
+            min-width: 50px;
         }
         .supersete-container {
             display: grid;
@@ -83,8 +88,15 @@
                     <option value="timemania">Timemania</option>
                     <option value="diasorte">Dia de Sorte</option>
                     <option value="maismilionaria">+Milionária</option>
+                    <option value="duplasena">Dupla Sena</option> 
                 </select>
             </div>
+            
+            <div id="historical-data-container" class="flex flex-col space-y-2 text-left p-4 bg-gray-100 rounded-lg">
+                <h3 class="font-bold text-gray-800">Status do Histórico</h3>
+                <p id="file-status" class="text-sm text-gray-500 mt-1">Selecione uma loteria para carregar o histórico...</p>
+            </div>
+            
             <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
                 <div class="flex-1">
                     <label for="num-jogos" class="block text-sm font-medium text-gray-700 mb-1">Número de Jogos</label>
@@ -116,6 +128,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- Elementos do DOM ---
             const generateButton = document.getElementById('generate-button');
             const lotteryTypeSelect = document.getElementById('lottery-type');
             const numJogosInput = document.getElementById('num-jogos');
@@ -126,18 +139,42 @@
             const resultsContainer = document.getElementById('results-container');
             const messageBox = document.getElementById('message-box');
             const lotteryLogo = document.getElementById('lottery-logo');
+            const fileStatusElement = document.getElementById('file-status');
 
-            const lotteryRules = {
-                megasena: { min: 6, max: 20, limit: 60, title: 'Mega Sena', logo: 'https://placehold.co/120x60/32b95c/white?text=Mega+Sena', cardColor: 'bg-green-500' },
-                lotofacil: { min: 15, max: 20, limit: 25, title: 'Lotofácil', logo: 'https://placehold.co/120x60/9c1a8e/white?text=Lotofácil', cardColor: 'bg-purple-600' },
-                quina: { min: 5, max: 15, limit: 80, title: 'Quina', logo: 'https://placehold.co/120x60/2b3990/white?text=Quina', cardColor: 'bg-blue-600' },
-                lotomania: { min: 50, max: 50, limit: 100, title: 'Lotomania', logo: 'https://placehold.co/120x60/f28d25/white?text=Lotomania', cardColor: 'bg-orange-500' },
-                supersete: { min: 7, max: 14, limit: 9, title: 'Super Sete', logo: 'https://placehold.co/120x60/0a3b8d/white?text=Super+Sete', cardColor: 'bg-indigo-700' },
-                timemania: { min: 10, max: 10, limit: 80, teamLimit: 80, title: 'Timemania', logo: 'https://placehold.co/120x60/5cb85c/white?text=Timemania', cardColor: 'bg-teal-500' },
-                diasorte: { min: 7, max: 15, limit: 31, mesLimit: 12, title: 'Dia de Sorte', logo: 'https://placehold.co/120x60/f0ad4e/white?text=Dia+de+Sorte', cardColor: 'bg-yellow-500' },
-                maismilionaria: { min: 6, max: 12, limit: 50, trevosMin: 2, trevosMax: 5, trevosLimit: 6, title: '+Milionária', logo: 'https://placehold.co/120x60/007a4a/white?text=%2BMilion%C3%A1ria', cardColor: 'bg-green-700' }
+            // --- Cache Global de Histórico ---
+            let allHistoricalData = {};
+
+            // --- URLs DO SEU REPOSITÓRIO GITHUB (CORRIGIDAS PARA RAW) ---
+            const HISTORY_URLS = {
+                megasena: "https://raw.githubusercontent.com/VHLS12/historico-loterias/main/Mega-Sena.CSV",
+                lotofacil: "https://raw.githubusercontent.com/VHLS12/historico-loterias/main/Lotof%C3%A1cil.CSV",
+                quina: "https://raw.githubusercontent.com/VHLS12/historico-loterias/main/Quina.CSV",
+                lotomania: "https://raw.githubusercontent.com/VHLS12/historico-loterias/main/Lotomania.CSV",
+                supersete: "https://raw.githubusercontent.com/VHLS12/historico-loterias/main/Super%20Sete.CSV",
+                timemania: "https://raw.githubusercontent.com/VHLS12/historico-loterias/main/Timemania.CSV",
+                diasorte: "https://raw.githubusercontent.com/VHLS12/historico-loterias/main/Dia%20de%20Sorte.CSV",
+                maismilionaria: "https://raw.githubusercontent.com/VHLS12/historico-loterias/main/%2BMilion%C3%A1ria.CSV",
+                duplasena: "https://raw.githubusercontent.com/VHLS12/historico-loterias/main/Dupla%20Sena.CSV"
             };
 
+            // --- Regras das Loterias (com colunas do histórico) ---
+            const lotteryRules = {
+                megasena: { min: 6, max: 20, limit: 60, title: 'Mega Sena', logo: 'https://placehold.co/120x60/32b95c/white?text=Mega+Sena', cardColor: 'bg-green-500', histCols: ['Bola1', 'Bola2', 'Bola3', 'Bola4', 'Bola5', 'Bola6'], prizes: [4, 5, 6], delimiter: ';' },
+                lotofacil: { min: 15, max: 20, limit: 25, title: 'Lotofácil', logo: 'https://placehold.co/120x60/9c1a8e/white?text=Lotofácil', cardColor: 'bg-purple-600', histCols: Array.from({length: 15}, (_, i) => `Bola${i + 1}`), prizes: [11, 12, 13, 14, 15], delimiter: ';' },
+                quina: { min: 5, max: 15, limit: 80, title: 'Quina', logo: 'https://placehold.co/120x60/2b3990/white?text=Quina', cardColor: 'bg-blue-600', histCols: ['Bola1', 'Bola2', 'Bola3', 'Bola4', 'Bola5'], prizes: [2, 3, 4, 5], delimiter: ';' },
+                lotomania: { min: 50, max: 50, limit: 100, title: 'Lotomania', logo: 'https://placehold.co/120x60/f28d25/white?text=Lotomania', cardColor: 'bg-orange-500', histCols: Array.from({length: 20}, (_, i) => `Bola${i + 1}`), prizes: [15, 16, 17, 18, 19, 20, 0], delimiter: ';' },
+                supersete: { min: 7, max: 14, limit: 9, title: 'Super Sete', logo: 'https://placehold.co/120x60/0a3b8d/white?text=Super+Sete', cardColor: 'bg-indigo-700', histCols: ['Coluna 1', 'Coluna 2', 'Coluna 3', 'Coluna 4', 'Coluna 5', 'Coluna 6', 'Coluna 7'], prizes: [3, 4, 5, 6, 7], delimiter: ';' },
+                timemania: { min: 10, max: 10, limit: 80, teamLimit: 80, title: 'Timemania', logo: 'https://placehold.co/120x60/5cb85c/white?text=Timemania', cardColor: 'bg-teal-500', histCols: ['Bola1', 'Bola2', 'Bola3', 'Bola4', 'Bola5', 'Bola6', 'Bola7'], prizes: [3, 4, 5, 6, 7], delimiter: ';' },
+                diasorte: { min: 7, max: 15, limit: 31, mesLimit: 12, title: 'Dia de Sorte', logo: 'https://placehold.co/120x60/f0ad4e/white?text=Dia+de+Sorte', cardColor: 'bg-yellow-500', histCols: ['Bola1', 'Bola2', 'Bola3', 'Bola4', 'Bola5', 'Bola6', 'Bola7'], prizes: [4, 5, 6, 7], delimiter: ';' },
+                maismilionaria: { min: 6, max: 12, limit: 50, trevosMin: 2, trevosMax: 5, trevosLimit: 6, title: '+Milionária', logo: 'https://placehold.co/120x60/007a4a/white?text=%2BMilion%C3%A1ria', cardColor: 'bg-green-700', histCols: ['Bola1', 'Bola2', 'Bola3', 'Bola4', 'Bola5', 'Bola6'], prizes: [], delimiter: ';' }, // Verificação de prêmios desabilitada
+                duplasena: { min: 6, max: 15, limit: 50, title: 'Dupla Sena', logo: 'https://placehold.co/120x60/d92f23/white?text=Dupla+Sena', cardColor: 'bg-red-600', histCols: ['Bola1 sorteio 1', 'Bola2 sorteio 1', 'Bola3 sorteio 1', 'Bola4 Sorteio 1', 'Bola5 sorteio 1', 'Bola6 sorteio 1'], histCols2: ['Bola1 sorteio 2', 'Bola2 sorteio 2', 'Bola3 sorteio 2', 'Bola4 Sorteio 2', 'Bola5 sorteio 2', 'Bola6 sorteio 2'], prizes: [3, 4, 5, 6], delimiter: ';' }
+            };
+
+            const meses = [
+                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+            ];
+            
             const times = [
                 'Flamengo', 'Corinthians', 'São Paulo', 'Palmeiras', 'Vasco', 'Santos', 'Grêmio', 'Internacional',
                 'Cruzeiro', 'Atlético-MG', 'Fluminense', 'Botafogo', 'Bahia', 'Vitória', 'Sport', 'Náutico',
@@ -155,10 +192,7 @@
                 'Porto Seguro', 'Jacobina'
             ];
 
-            const meses = [
-                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-            ];
+            // --- FUNÇÕES PRINCIPAIS (LÓGICA) ---
 
             function updateDezenasRange() {
                 const type = lotteryTypeSelect.value;
@@ -166,18 +200,10 @@
                 numDezenasInput.min = rules.min;
                 numDezenasInput.max = rules.max;
                 numDezenasInput.value = rules.min;
-                numDezenasInput.disabled = false;
+                numDezenasInput.disabled = (type === 'lotomania' || type === 'timemania');
                 fixedNumbersInput.value = '';
-
-                if (type === 'lotomania') {
-                    numDezenasInput.disabled = true;
-                }
-
-                if (type === 'maismilionaria') {
-                    trevosContainer.classList.remove('hidden');
-                } else {
-                    trevosContainer.classList.add('hidden');
-                }
+                trevosContainer.classList.toggle('hidden', type !== 'maismilionaria');
+                loadHistoryForSelectedLottery(); 
             }
 
             function updateLogo() {
@@ -186,72 +212,207 @@
                 lotteryLogo.alt = `Logo da ${lotteryRules[type].title}`;
             }
 
-            lotteryTypeSelect.addEventListener('change', () => {
-                updateDezenasRange();
-                updateLogo();
-            });
-            updateDezenasRange();
-            updateLogo();
-
             function showMessage(message, type = 'info') {
                 messageBox.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
-                if (type === 'error') {
-                    messageBox.classList.add('bg-red-100', 'text-red-700');
-                } else if (type === 'success') {
-                    messageBox.classList.add('bg-green-100', 'text-green-700');
-                }
+                if (type === 'error') messageBox.classList.add('bg-red-100', 'text-red-700');
+                else if (type === 'success') messageBox.classList.add('bg-green-100', 'text-green-700');
                 messageBox.textContent = message;
-                setTimeout(() => {
-                    messageBox.classList.add('hidden');
-                }, 5000);
+                setTimeout(() => messageBox.classList.add('hidden'), 5000);
             }
 
-            function generateLotteryNumbers(count, limit, fixedNumbers = []) {
-                const numbers = new Set(fixedNumbers);
-                while (numbers.size < count) {
-                    const number = Math.floor(Math.random() * limit) + 1;
-                    if (!numbers.has(number)) {
-                        numbers.add(number);
+            // ---------- LÓGICA DE CARREGAMENTO DE HISTÓRICO WEB ----------
+
+            async function loadHistoryForSelectedLottery() {
+                const lotteryType = lotteryTypeSelect.value;
+                const rules = lotteryRules[lotteryType];
+                
+                if (allHistoricalData[lotteryType]) {
+                    fileStatusElement.textContent = `Histórico da ${rules.title} carregado (${allHistoricalData[lotteryType].draws.length} sorteios).`;
+                    return;
+                }
+
+                const url = HISTORY_URLS[lotteryType];
+                if (!url) {
+                    fileStatusElement.textContent = `URL de histórico para ${rules.title} não configurado.`;
+                    return;
+                }
+
+                fileStatusElement.textContent = `Carregando histórico da ${rules.title}...`;
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`Falha ao baixar arquivo: ${response.statusText}`);
+                    
+                    const text = await response.text();
+                    const history = parseHistoryFile(text, lotteryType);
+                    allHistoricalData[lotteryType] = history; 
+                    fileStatusElement.textContent = `Histórico da ${rules.title} carregado (${history.draws.length} sorteios).`;
+                    showMessage(`Histórico da ${rules.title} carregado!`, 'success');
+                
+                } catch (error) {
+                    console.error("Erro ao carregar dados:", error);
+                    fileStatusElement.textContent = `Erro ao carregar histórico: ${error.message}`;
+                    showMessage(`Erro ao carregar histórico: ${error.message}`, 'error');
+                }
+            }
+
+            function parseHistoryFile(text, lotteryType) {
+                const rules = lotteryRules[lotteryType];
+                const delimiter = rules.delimiter; 
+                const lines = text.split(/\r?\n/);
+                if (lines.length < 2) throw new Error('Arquivo vazio ou inválido.');
+
+                const headerLine = lines.shift().trim(); 
+                const header = headerLine.split(delimiter); 
+
+                const colIndices = rules.histCols.map(colName => {
+                    let index = header.indexOf(colName);
+                    if (index === -1) {
+                         if (lotteryType === 'duplasena' && colName.includes('Sorteio 1')) {
+                             const altName = colName.replace('Sorteio 1', 'sorteio 1'); 
+                             index = header.indexOf(altName);
+                         }
+                         if (index === -1) throw new Error(`Coluna necessária não encontrada: ${colName}`);
                     }
+                    return index;
+                });
+
+                let colIndices2 = null;
+                if (lotteryType === 'duplasena') {
+                    colIndices2 = rules.histCols2.map(colName => {
+                        let index = header.indexOf(colName);
+                        if (index === -1) {
+                             const altName = colName.replace('Sorteio 2', 'sorteio 2');
+                             index = header.indexOf(altName);
+                        }
+                        if (index === -1) throw new Error(`Coluna necessária não encontrada: ${colName}`);
+                        return index;
+                    });
+                }
+                
+                const draws = [];
+                const specialDraws = (lotteryType === 'duplasena') ? [] : null;
+
+                for (const line of lines) {
+                    if (line.trim() === '') continue;
+                    const data = line.split(delimiter);
+                    if (data.length < header.length) continue; 
+
+                    const draw = colIndices.map(index => parseInt(data[index], 10));
+                    if (!draw.some(isNaN)) {
+                        draws.push(draw);
+                    }
+
+                    if (specialDraws !== null) {
+                         const draw2 = colIndices2.map(index => parseInt(data[index], 10));
+                         if (!draw2.some(isNaN)) {
+                             specialDraws.push(draw2);
+                         }
+                    }
+                }
+                return { draws, specialDraws };
+            }
+
+            // ---------- GERADORES DE NÚMEROS ----------
+            function generateLotteryNumbers(count, limit, fixedNumbers = []) {
+                const numbers = new Set(fixedNumbers.filter(n => n > 0 && n <= limit)); 
+                while (numbers.size < count) {
+                    const num = Math.floor(Math.random() * limit) + 1;
+                    numbers.add(num);
                 }
                 return Array.from(numbers).sort((a, b) => a - b);
             }
 
             function generateSuperSeteNumbers(count) {
-                const numbers = [];
-                const columnNumbers = new Array(7).fill().map(() => new Set());
+                const columns = new Array(7).fill(null).map(() => new Set());
                 let remaining = count;
+
+                if (count >= 7) {
+                    for (let i = 0; i < 7; i++) {
+                        columns[i].add(Math.floor(Math.random() * 10));
+                        remaining--;
+                    }
+                }
                 
-                // Distribui os números
                 while (remaining > 0) {
                     const colIndex = Math.floor(Math.random() * 7);
-                    if (columnNumbers[colIndex].size < 2) {
-                        const newNumber = Math.floor(Math.random() * 10);
-                        if (!columnNumbers[colIndex].has(newNumber)) {
-                            columnNumbers[colIndex].add(newNumber);
-                            remaining--;
-                        }
+                    if (columns[colIndex].size < 3) { 
+                        let newNumber;
+                        do {
+                            newNumber = Math.floor(Math.random() * 10);
+                        } while (columns[colIndex].has(newNumber));
+                        columns[colIndex].add(newNumber);
+                        remaining--;
                     }
                 }
-                
-                // Garante pelo menos um número por coluna
-                for (let i = 0; i < 7; i++) {
-                    if (columnNumbers[i].size === 0) {
-                        const newNumber = Math.floor(Math.random() * 10);
-                        columnNumbers[i].add(newNumber);
+                 for (let i = 0; i < 7; i++) {
+                    if (columns[i].size === 0) {
+                        columns[i].add(Math.floor(Math.random() * 10));
                     }
                 }
-
-                columnNumbers.forEach(col => numbers.push(Array.from(col).sort((a, b) => a - b)));
-                return numbers;
+                return columns.map(colSet => Array.from(colSet).sort((a, b) => a - b));
             }
 
 
+            // ---------- VERIFICADOR DE HISTÓRICO UNIVERSAL ----------
+            
+            function verificarHistorico(jogo, lotteryType) {
+                const historyData = allHistoricalData[lotteryType];
+                if (!historyData) return "Histórico não carregado.";
+
+                const rules = lotteryRules[lotteryType];
+                if (rules.prizes.length === 0) return "Verificação não disponível."; 
+
+                const prizeMap = new Map();
+                rules.prizes.forEach(p => prizeMap.set(p, 0)); 
+
+                if (lotteryType === 'supersete') {
+                     historyData.draws.forEach(concurso => {
+                        let hits = 0;
+                        for(let i = 0; i < 7; i++) {
+                            if (jogo[i].includes(concurso[i])) {
+                                hits++;
+                            }
+                        }
+                        if (prizeMap.has(hits)) {
+                            prizeMap.set(hits, prizeMap.get(hits) + 1);
+                        }
+                    });
+
+                } else if (lotteryType === 'duplasena') {
+                    historyData.draws.forEach(concurso => { // Sorteio 1
+                        const hitsS1 = jogo.filter(num => concurso.includes(num)).length;
+                        if (prizeMap.has(hitsS1)) prizeMap.set(hitsS1, prizeMap.get(hitsS1) + 1);
+                    });
+                    historyData.specialDraws.forEach(concursoS2 => { // Sorteio 2
+                        const hitsS2 = jogo.filter(num => concursoS2.includes(num)).length;
+                        if (prizeMap.has(hitsS2)) prizeMap.set(hitsS2, prizeMap.get(hitsS2) + 1);
+                    });
+                
+                } else { // Mega, Loto, Quina, etc.
+                    historyData.draws.forEach(concurso => {
+                        const hits = jogo.filter(num => concurso.includes(num)).length;
+                        if (prizeMap.has(hits)) {
+                            prizeMap.set(hits, prizeMap.get(hits) + 1);
+                        }
+                    });
+                }
+
+                let output = [];
+                prizeMap.forEach((count, prize) => {
+                    output.push(`${prize} acertos: <strong>${count}</strong>`);
+                });
+                
+                // ### INÍCIO DA ALTERAÇÃO (SOLICITADA PELO USUÁRIO) ###
+                // Adiciona o título "Histórico:" antes da contagem de prêmios.
+                return `Histórico:<br>${output.join(' | ')}`;
+                // ### FIM DA ALTERAÇÃO ###
+            }
+
+            // ---------- DISPLAY RESULTS ----------
+
             function displayResults(games, lotteryType, specialNumbers) {
                 resultsContainer.innerHTML = '';
-                if (games.length === 0) {
-                    return;
-                }
+                if (games.length === 0) return;
 
                 games.forEach((game, index) => {
                     const gameDiv = document.createElement('div');
@@ -271,7 +432,7 @@
                             columnDiv.classList.add('supersete-column');
                             const colTitle = document.createElement('h4');
                             colTitle.classList.add('text-sm', 'font-semibold', 'text-gray-600', 'mb-1');
-                            colTitle.textContent = `Coluna ${colIndex + 1}`;
+                            colTitle.textContent = `C${colIndex + 1}`;
                             columnDiv.appendChild(colTitle);
                             
                             column.forEach(number => {
@@ -287,57 +448,55 @@
                         const numbersDiv = document.createElement('div');
                         numbersDiv.classList.add('flex', 'flex-wrap', 'justify-center', 'gap-2');
                         
-                        let mainNumbers = game;
-                        let specialDisplayNumbers = [];
-                        let specialTitle = '';
-    
-                        if (lotteryType === 'maismilionaria') {
-                            specialDisplayNumbers = specialNumbers[index];
-                            specialTitle = 'Trevos:';
-                        } else if (lotteryType === 'timemania') {
-                            specialDisplayNumbers = specialNumbers[index];
-                            specialTitle = 'Time do Coração:';
-                        } else if (lotteryType === 'diasorte') {
-                            specialDisplayNumbers = specialNumbers[index];
-                            specialTitle = 'Mês da Sorte:';
-                        }
-    
-                        mainNumbers.forEach(number => {
+                        game.forEach(number => {
                             const numberSpan = document.createElement('span');
                             numberSpan.classList.add('lottery-number');
                             numberSpan.textContent = String(number).padStart(2, '0');
                             numbersDiv.appendChild(numberSpan);
                         });
-    
-                        if (specialDisplayNumbers && specialDisplayNumbers.length > 0) {
+
+                        if (specialNumbers && specialNumbers[index]) {
+                            let specialTitle = '';
+                            if (lotteryType === 'maismilionaria') specialTitle = 'Trevos:';
+                            else if (lotteryType === 'timemania') specialTitle = 'Time do Coração:';
+                            else if (lotteryType === 'diasorte') specialTitle = 'Mês da Sorte:';
+
                             const specialTitleEl = document.createElement('h4');
                             specialTitleEl.classList.add('text-sm', 'font-semibold', 'text-gray-200', 'mt-4', 'mb-2', 'w-full');
                             specialTitleEl.textContent = specialTitle;
                             numbersDiv.appendChild(specialTitleEl);
-    
-                            specialDisplayNumbers.forEach(number => {
+
+                            specialNumbers[index].forEach(number => {
                                 const specialSpan = document.createElement('span');
                                 let textContent = String(number).padStart(2, '0');
-                                if (lotteryType === 'timemania') {
-                                    textContent = times[number];
-                                } else if (lotteryType === 'diasorte') {
-                                    textContent = meses[number];
-                                }
+                                if (lotteryType === 'timemania') textContent = times[number] || number; 
+                                else if (lotteryType === 'diasorte') textContent = meses[number] || number; 
+                                
                                 specialSpan.classList.add('lottery-number');
-                                if (lotteryType === 'maismilionaria') {
-                                    specialSpan.classList.add('trevo-number');
-                                } else {
-                                    specialSpan.classList.add('team-month-number');
-                                }
+                                if (lotteryType === 'maismilionaria') specialSpan.classList.add('trevo-number');
+                                else specialSpan.classList.add('team-month-number');
                                 specialSpan.textContent = textContent;
                                 numbersDiv.appendChild(specialSpan);
                             });
                         }
                         gameDiv.appendChild(numbersDiv);
                     }
+                    
+                    const historyInfo = document.createElement('div');
+                    historyInfo.classList.add('mt-4', 'text-sm', 'text-white', 'opacity-80', 'bg-black', 'bg-opacity-20', 'p-2', 'rounded');
+                    historyInfo.innerHTML = verificarHistorico(game, lotteryType);
+                    gameDiv.appendChild(historyInfo);
+
                     resultsContainer.appendChild(gameDiv);
                 });
             }
+            
+            // --- EVENT LISTENERS FINAIS ---
+
+            lotteryTypeSelect.addEventListener('change', () => {
+                updateDezenasRange();
+                updateLogo();
+            });
 
             generateButton.addEventListener('click', () => {
                 const numJogos = parseInt(numJogosInput.value, 10);
@@ -346,70 +505,57 @@
                 const rules = lotteryRules[lotteryType];
                 const fixedNumbers = fixedNumbersInput.value.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n));
 
+                // Validações
                 if (isNaN(numJogos) || numJogos < 1 || numJogos > 100) {
                     showMessage('Por favor, insira um número de jogos entre 1 e 100.', 'error');
                     return;
                 }
-                if (isNaN(numDezenas) || numDezenas < rules.min || numDezenas > rules.max) {
+                if (!numDezenasInput.disabled && (isNaN(numDezenas) || numDezenas < rules.min || numDezenas > rules.max)) {
                     showMessage(`Por favor, insira um número de dezenas entre ${rules.min} e ${rules.max} para a ${rules.title}.`, 'error');
                     return;
                 }
-                if (fixedNumbers.length >= numDezenas) {
-                    showMessage(`A quantidade de números fixos deve ser menor que o número de dezenas por jogo (${numDezenas}).`, 'error');
+                 const currentNumDezenas = numDezenasInput.disabled ? rules.min : numDezenas;
+                if (fixedNumbers.filter(n => n > 0 && n <= rules.limit).length > currentNumDezenas) {
+                    showMessage(`Números fixos (válidos) não podem exceder o total de dezenas.`, 'error');
                     return;
                 }
 
-                if (lotteryType === 'maismilionaria') {
-                    const numTrevos = parseInt(numTrevosInput.value, 10);
-                    if (isNaN(numTrevos) || numTrevos < rules.trevosMin || numTrevos > rules.trevosMax) {
-                        showMessage(`Por favor, insira um número de trevos entre ${rules.trevosMin} e ${rules.trevosMax}.`, 'error');
-                        return;
-                    }
-                    const games = [];
-                    const trevoGames = [];
-                    for (let i = 0; i < numJogos; i++) {
-                        games.push(generateLotteryNumbers(numDezenas, rules.limit, fixedNumbers));
-                        trevoGames.push(generateLotteryNumbers(numTrevos, rules.trevosLimit));
-                    }
-                    displayResults(games, lotteryType, trevoGames);
-                } else if (lotteryType === 'supersete') {
-                    const games = [];
-                    for (let i = 0; i < numJogos; i++) {
+                const games = [];
+                const specialGames = [];
+
+                for (let i = 0; i < numJogos; i++) {
+                    if (lotteryType === 'supersete') {
                         games.push(generateSuperSeteNumbers(numDezenas));
+                    } else {
+                        games.push(generateLotteryNumbers(currentNumDezenas, rules.limit, fixedNumbers));
                     }
-                    displayResults(games, lotteryType);
-                } else if (lotteryType === 'timemania') {
-                    const games = [];
-                    const specialGames = [];
-                    for (let i = 0; i < numJogos; i++) {
-                        games.push(generateLotteryNumbers(rules.min, rules.limit, fixedNumbers));
+
+                    if (lotteryType === 'maismilionaria') {
+                        const numTrevos = parseInt(numTrevosInput.value, 10);
+                         if (isNaN(numTrevos) || numTrevos < rules.trevosMin || numTrevos > rules.trevosMax) {
+                            showMessage(`Por favor, insira um número de trevos entre ${rules.trevosMin} e ${rules.trevosMax}.`, 'error');
+                            return; 
+                        }
+                        specialGames.push(generateLotteryNumbers(numTrevos, rules.trevosLimit, []));
+                    } else if (lotteryType === 'timemania') {
                         specialGames.push([Math.floor(Math.random() * times.length)]);
-                    }
-                    displayResults(games, lotteryType, specialGames);
-                } else if (lotteryType === 'diasorte') {
-                    const games = [];
-                    const specialGames = [];
-                    for (let i = 0; i < numJogos; i++) {
-                        games.push(generateLotteryNumbers(rules.min, rules.limit, fixedNumbers));
+                    } else if (lotteryType === 'diasorte') {
                         specialGames.push([Math.floor(Math.random() * meses.length)]);
                     }
-                    displayResults(games, lotteryType, specialGames);
-                } else {
-                    const games = [];
-                    for (let i = 0; i < numJogos; i++) {
-                        games.push(generateLotteryNumbers(numDezenas, rules.limit, fixedNumbers));
-                    }
-                    displayResults(games, lotteryType);
                 }
+                
+                displayResults(games, lotteryType, specialGames);
 
-                if (numJogos > 0) {
-                    showMessage('Jogos gerados com sucesso!', 'success');
+                if (games.length > 0) {
+                    // Mensagem de sucesso (corrigida)
+                    showMessage('Jogos gerados com sucesso!', 'success'); 
                 }
             });
+
+            // --- INICIALIZAÇÃO ---
+            updateDezenasRange();
+            updateLogo();
         });
     </script>
 </body>
 </html>
-
-
-
